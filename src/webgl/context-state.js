@@ -120,7 +120,7 @@ export function setParameters(gl, parameters) {
 export function withParameters(gl, parameters, func) {
   // assertWebGLContext(gl);
 
-  const {frameBuffer, nocatch = true} = parameters;
+  const {frameBuffer, readFramebuffer, nocatch = true} = parameters;
   let {framebuffer} = parameters;
   if (frameBuffer) {
     log.deprecated('withParameters({frameBuffer})', 'withParameters({framebuffer})');
@@ -130,10 +130,6 @@ export function withParameters(gl, parameters, func) {
   // Define a helper function that will reset state after the function call
   function resetStateAfterCall() {
     popContextState(gl);
-    if (framebuffer) {
-      // TODO - was there any previously set frame buffer?
-      framebuffer.unbind();
-    }
   }
 
   pushContextState(gl);
@@ -141,8 +137,11 @@ export function withParameters(gl, parameters, func) {
   setParameters(gl, parameters);
 
   if (framebuffer) {
-    // TODO - was there any previously set frame buffer we need to remember?
     framebuffer.bind();
+  }
+
+  if (readFramebuffer) {
+    readFramebuffer.bind({target: GL.READ_FRAMEBUFFER});
   }
 
   // Setup is done, call the function

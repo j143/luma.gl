@@ -3,7 +3,7 @@
 import test from 'tape-catch';
 
 import {GL} from 'luma.gl';
-import {getParameter, getParameters, setParameters, withParameters, resetParameters} from 'luma.gl';
+import {getParameter, getParameters, setParameters, withParameters, resetParameters, Framebuffer} from 'luma.gl';
 import {getKey} from '../../src/webgl-utils/constants-to-keys';
 
 import {GL_PARAMETER_DEFAULTS as GL_PARAMETERS} from '../../src/webgl-utils/set-parameters';
@@ -292,5 +292,68 @@ test('WebGLState#BlendEquationMinMax', t => {
       t.comment(`${contextName} not available, skipping tests`);
     }
   }
+  t.end();
+});
+
+test('WebGLState#withParameters framebuffer', t => {
+  const {gl} = fixture;
+  const framebufferOne = new Framebuffer(gl);
+  const framebufferTwo = new Framebuffer(gl);
+
+  resetParameters(gl);
+
+  let fbHandle;
+  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  t.equal(fbHandle, null, 'Initial draw frambuffer binding should be null');
+
+  withParameters(gl, {framebuffer: framebufferOne}, () => {
+    fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+    t.deepEqual(fbHandle, framebufferOne.handle, 'withParameters should bind framebuffer');
+
+    withParameters(gl, {framebuffer: framebufferTwo}, () => {
+      fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+      t.deepEqual(fbHandle, framebufferTwo.handle, 'Inner withParameters should bind framebuffer');
+    });
+
+    fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+    t.deepEqual(fbHandle, framebufferOne.handle, 'Inner withParameters should restore draw framebuffer binding');
+  });
+  fbHandle = getParameter(gl, gl.FRAMEBUFFER_BINDING);
+  t.deepEqual(fbHandle, null, 'withParameters should restore framebuffer bidning');
+
+  t.end();
+});
+
+test('WebGLState#withParameters read-framebuffer (WebGL2 only)', t => {
+  const {gl2} = fixture;
+  if (!gl2) {
+    t.comment('WebGL2 not available, skipping tests');
+    t.end();
+    return;
+  }
+  const readFramebufferOne = new Framebuffer(gl2);
+  const readFramebufferTwo = new Framebuffer(gl2);
+
+  resetParameters(gl2);
+
+  let fbHandle;
+  fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+  t.equal(fbHandle, null, 'Initial read frambuffer binding should be null');
+
+  withParameters(gl2, {readFramebuffer: readFramebufferOne}, () => {
+    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    t.equal(fbHandle, readFramebufferOne.handle, 'withParameters should bind read framebuffer');
+
+    withParameters(gl2, {readFramebuffer: readFramebufferTwo}, () => {
+      fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+      t.equal(fbHandle, readFramebufferTwo.handle, 'Inner withParameters should bind read framebuffer');
+    });
+
+    fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+    t.equal(fbHandle, readFramebufferOne.handle, 'Inner withParameters should restore read framebuffer binding');
+  });
+  fbHandle = getParameter(gl2, gl2.READ_FRAMEBUFFER_BINDING);
+  t.equal(fbHandle, null, 'withParameters should restore read framebuffer binding');
+
   t.end();
 });
